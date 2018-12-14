@@ -75,6 +75,9 @@
 /* Enable PC histogram generation */
 #undef RISCV_ENABLE_HISTOGRAM
 
+/* Enable macro-op fusion detection */
+#undef RISCV_ENABLE_FUSION_DETECTION
+
 /* Enable hardware support for misaligned loads and stores */
 #undef RISCV_ENABLE_MISALIGNED
 

@@ -705,6 +705,7 @@ with_isa
 with_fesvr
 enable_commitlog
 enable_histogram
+enable_fusion_detection
 enable_dirty
 enable_misaligned
 '
@@ -1351,6 +1352,8 @@ Optional Features:
                           Enable all optional subprojects
   --enable-commitlog      Enable commit log generation
   --enable-histogram      Enable PC histogram generation
+  --enable-fusion-detection
+                          Enable macro-op fusion detection
   --enable-dirty          Enable hardware management of PTE accessed and dirty
                           bits
   --enable-misaligned     Enable hardware support for misaligned loads and
@@ -4671,6 +4674,19 @@ if test "x$enable_histogram" = "xyes"; then :
 
 
 $as_echo "#define RISCV_ENABLE_HISTOGRAM /**/" >>confdefs.h
+
+
+fi
+
+# Check whether --enable-fusion-detection was given.
+if test "${enable_fusion_detection+set}" = set; then :
+  enableval=$enable_fusion_detection;
+fi
+
+if test "x$enable_fusion_detection" = "xyes"; then :
+
+
+$as_echo "#define RISCV_ENABLE_FUSION_DETECTION /**/" >>confdefs.h
 
 
 fi
