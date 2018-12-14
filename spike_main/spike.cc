@@ -42,6 +42,7 @@ static void help()
   fprintf(stderr, "  --debug-sba=<bits>    Debug bus master supports up to "
       "<bits> wide accesses [default 0]\n");
   fprintf(stderr, "  --debug-auth          Debug module requires debugger to authenticate\n");
+  fprintf(stderr, "  --fusion-stats        Macro-op fusion stats (for my dissertation)");
   exit(1);
 }
 
@@ -84,6 +85,7 @@ int main(int argc, char** argv)
   bool log = false;
   bool dump_dts = false;
   bool dtb_enabled = true;
+  bool fusion_stats = false;
   size_t nprocs = 1;
   reg_t start_pc = reg_t(-1);
   std::vector<std::pair<reg_t, mem_t*>> mems;
@@ -145,6 +147,7 @@ int main(int argc, char** argv)
       [&](const char* s){max_bus_master_bits = atoi(s);});
   parser.option(0, "debug-auth", 0,
       [&](const char* s){require_authentication = true;});
+  parser.option(0, "fusion-stats", 0, [&](const char *s){fusion_stats = true;});
 
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
@@ -183,5 +186,6 @@ int main(int argc, char** argv)
   s.set_debug(debug);
   s.set_log(log);
   s.set_histogram(histogram);
+  s.set_detect_fusion(fusion_stats);
   return s.run();
 }

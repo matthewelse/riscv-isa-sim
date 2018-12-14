@@ -32,6 +32,9 @@ public:
   void set_log(bool value);
   void set_histogram(bool value);
   void set_procs_debug(bool value);
+  void set_detect_fusion(bool value) {
+    this->detect_fusion = value;
+  };
   void set_dtb_enabled(bool value) {
     this->dtb_enabled = value;
   }
@@ -66,6 +69,7 @@ private:
   bool log;
   bool histogram_enabled; // provide a histogram of PCs
   bool dtb_enabled;
+  bool detect_fusion;
   remote_bitbang_t* remote_bitbang;
 
   // memory-mapped I/O routines
