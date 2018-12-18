@@ -48,6 +48,15 @@ processor_t::~processor_t()
   }
 #endif
 
+#ifdef RISCV_ENABLE_FUSION_DETECTION
+  if (fusion_enabled)
+  {
+    fprintf(stderr, "Fusion opportunities detected: %zu\n",fusion_chances.size());
+    for (auto it : fusion_chances)
+      fprintf(stderr, "%0" PRIx64 " %" PRIu64 "\n", it.first, it.second);
+  }
+#endif
+
   delete mmu;
   delete disassembler;
 }
@@ -147,6 +156,16 @@ void processor_t::set_histogram(bool value)
   if (value) {
     fprintf(stderr, "PC Histogram support has not been properly enabled;");
     fprintf(stderr, " please re-build the riscv-isa-run project using \"configure --enable-histogram\".\n");
+  }
+#endif
+}
+
+void processor_t::set_fusion(bool value) {
+  fusion_enabled = value;
+#ifndef RISCV_ENABLE_FUSION_DETECTION
+  if (value) {
+    fprintf(stderr, "Macro-op fusion detection support has not been properly enabled;");
+    fprintf(stderr, " please re-build riscv-isa-sim project using \"configure --enable-fusion-detection\".\n");
   }
 #endif
 }

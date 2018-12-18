@@ -171,6 +171,7 @@ public:
 
   void set_debug(bool value);
   void set_histogram(bool value);
+  void set_fusion(bool value);
   void reset();
   void step(size_t n); // run for n cycles
   void set_csr(int which, reg_t val);
@@ -200,6 +201,7 @@ public:
   reg_t legalize_privilege(reg_t);
   void set_privilege(reg_t);
   void update_histogram(reg_t pc);
+  void mark_fusion(reg_t pc);
   const disassembler_t* get_disassembler() { return disassembler; }
 
   void register_insn(insn_desc_t);
@@ -314,7 +316,12 @@ private:
 
   std::vector<insn_desc_t> instructions;
   std::map<reg_t,uint64_t> pc_histogram;
+  
+  // how do we keep track of opportunities for macro-op fusion?
+  bool fusion_enabled;
+  std::map<uint64_t, uint64_t> fusion_chances;
 
+  // this is effectively storing the bottom 13 bits of each instruction
   static const size_t OPCODE_CACHE_SIZE = 8191;
   insn_desc_t opcode_cache[OPCODE_CACHE_SIZE];
 
