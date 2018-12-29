@@ -218,7 +218,35 @@ void processor_t::step(size_t n)
           if (ic_entry->data.insn.length() == 2) {
             // the next instruction is also compressed
 
-            printf("Opportunity for op-fusion: two compressed instructions in a row.\n");
+            // look for load effective address:
+            if ((old_fetch.insn.bits() & MASK_C_SLLI) == MATCH_C_SLLI) {
+                if ((ic_entry->data.insn.bits() & MASK_C_ADD) == MATCH_C_ADD) {
+                    // check a few things:
+                    uint64_t rd_1 = old_fetch.insn.rvc_rd();
+                    uint64_t rd_2 = ic_entry->data.insn.rvc_rd();
+                    uint64_t rs1_1 = old_fetch.insn.rvc_rs1();
+                    uint64_t rs1_2 = ic_entry->data.insn.rvc_rs1();
+
+                    if ((rd_1 == rd_2) && (rs1_2 == rd_1)) {
+                        // chance for load effective address
+                        //printf("Opportunity for LEA fusion\n");
+                    }
+                }
+            }
+
+            // clear upper word
+            if ((old_fetch.insn.bits() & MASK_C_SLLI) == MATCH_C_SLLI) {
+                if ((ic_entry->data.insn.bits() & MASK_C_SRLI) == MATCH_C_SRLI) {
+                    int64_t rs2_1 = old_fetch.insn.rvc_zimm();
+                    int64_t rs2_2 = ic_entry->data.insn.rvc_zimm();
+
+                    if (rs2_1 == 32 && rs2_2 <= 32 && rs2_2 >= 25) {
+                        printf("Opportunity for clear upper word fusion\n");
+                    }
+
+                }
+            } 
+
           }
         }
 #endif
