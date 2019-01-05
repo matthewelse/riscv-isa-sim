@@ -69,13 +69,6 @@ inline void processor_t::update_histogram(reg_t pc)
 #endif
 }
 
-inline void processor_t::mark_fusion(reg_t pc)
-{
-#ifdef RISCV_ENABLE_FUSION_DETECTION
-  fusion_chances[pc]++;
-#endif
-}
-
 // This is expected to be inlined by the compiler so each use of execute_insn
 // includes a duplicated body of the function to get separate fetch.func
 // function calls.
@@ -212,43 +205,45 @@ void processor_t::step(size_t n)
         }
 
 #ifdef RISCV_ENABLE_FUSION_DETECTION
-        // look for macro-op fusion opporunities
-        if (old_fetch.insn.length() == 2) {
-          // this is a compressed instruction
-          if (ic_entry->data.insn.length() == 2) {
-            // the next instruction is also compressed
+        if(fusion_enabled) {
+            // look for macro-op fusion opporunities
+            if (old_fetch.insn.length() == 2) {
+              // this is a compressed instruction
+              if (ic_entry->data.insn.length() == 2) {
+                // the next instruction is also compressed
 
-            // look for load effective address:
-            if ((old_fetch.insn.bits() & MASK_C_SLLI) == MATCH_C_SLLI) {
-                if ((ic_entry->data.insn.bits() & MASK_C_ADD) == MATCH_C_ADD) {
-                    // check a few things:
-                    uint64_t rd_1 = old_fetch.insn.rvc_rd();
-                    uint64_t rd_2 = ic_entry->data.insn.rvc_rd();
-                    uint64_t rs1_1 = old_fetch.insn.rvc_rs1();
-                    uint64_t rs1_2 = ic_entry->data.insn.rvc_rs1();
+                // look for load effective address:
+                if ((old_fetch.insn.bits() & MASK_C_SLLI) == MATCH_C_SLLI) {
+                    if ((ic_entry->data.insn.bits() & MASK_C_ADD) == MATCH_C_ADD) {
+                        // check a few things:
+                        uint64_t rd_1 = old_fetch.insn.rvc_rd();
+                        uint64_t rd_2 = ic_entry->data.insn.rvc_rd();
+                        uint64_t rs1_1 = old_fetch.insn.rvc_rs1();
+                        uint64_t rs1_2 = ic_entry->data.insn.rvc_rs1();
 
-                    if ((rd_1 == rd_2) && (rs1_2 == rd_1)) {
-                        // chance for load effective address
-                        //printf("Opportunity for LEA fusion\n");
+                        if ((rd_1 == rd_2) && (rs1_2 == rd_1)) {
+                            // chance for load effective address
+                            this->fusion_chances.load_effective++;
+                        }
                     }
                 }
+
+                // clear upper word
+                if ((old_fetch.insn.bits() & MASK_C_SLLI) == MATCH_C_SLLI) {
+                    if ((ic_entry->data.insn.bits() & MASK_C_SRLI) == MATCH_C_SRLI) {
+                        int64_t rs2_1 = old_fetch.insn.rvc_zimm();
+                        int64_t rs2_2 = ic_entry->data.insn.rvc_zimm();
+
+                        if (rs2_1 == 32 && rs2_2 <= 32 && rs2_2 >= 25) {
+                            this->fusion_chances.clear_upper_word++;
+                        }
+
+                    }
+                } 
+
+              }
             }
-
-            // clear upper word
-            if ((old_fetch.insn.bits() & MASK_C_SLLI) == MATCH_C_SLLI) {
-                if ((ic_entry->data.insn.bits() & MASK_C_SRLI) == MATCH_C_SRLI) {
-                    int64_t rs2_1 = old_fetch.insn.rvc_zimm();
-                    int64_t rs2_2 = ic_entry->data.insn.rvc_zimm();
-
-                    if (rs2_1 == 32 && rs2_2 <= 32 && rs2_2 >= 25) {
-                        printf("Opportunity for clear upper word fusion\n");
-                    }
-
-                }
-            } 
-
-          }
-        }
+        } 
 #endif
 
         advance_pc();

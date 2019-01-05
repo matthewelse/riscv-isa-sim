@@ -24,6 +24,8 @@ processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
   : debug(false), halt_request(false), sim(sim), ext(NULL), id(id),
   halt_on_reset(halt_on_reset), last_pc(1), executions(1)
 {
+  set_fusion(true);
+
   parse_isa_string(isa);
   register_base_instructions();
 
@@ -51,9 +53,13 @@ processor_t::~processor_t()
 #ifdef RISCV_ENABLE_FUSION_DETECTION
   if (fusion_enabled)
   {
-    fprintf(stderr, "Fusion opportunities detected: %zu\n",fusion_chances.size());
-    for (auto it : fusion_chances)
-      fprintf(stderr, "%0" PRIx64 " %" PRIu64 "\n", it.first, it.second);
+    int fusion_total = fusion_chances.load_effective + fusion_chances.index_load +
+        fusion_chances.clear_upper_word;
+    fprintf(stderr, "Fusion opportunities detected: %d\n", fusion_total);
+
+    fprintf(stderr, "load_effective: %d\n", fusion_chances.load_effective);
+    fprintf(stderr, "index_load: %d\n", fusion_chances.index_load);
+    fprintf(stderr, "clear_upper_word: %d\n", fusion_chances.clear_upper_word);
   }
 #endif
 
