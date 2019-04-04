@@ -12,9 +12,11 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include "../VERSION"
 
-static void help()
+static void help(int exit_code = 1)
 {
+  fprintf(stderr, "Spike RISC-V ISA Simulator " SPIKE_VERSION "\n\n");
   fprintf(stderr, "usage: spike [host options] <target program> [target options]\n");
   fprintf(stderr, "Host Options:\n");
   fprintf(stderr, "  -p<n>                 Simulate <n> processors [default 1]\n");
@@ -24,7 +26,7 @@ static void help()
   fprintf(stderr, "  -d                    Interactive debug mode\n");
   fprintf(stderr, "  -g                    Track histogram of PCs\n");
   fprintf(stderr, "  -l                    Generate a log of execution\n");
-  fprintf(stderr, "  -h                    Print this help message\n");
+  fprintf(stderr, "  -h, --help            Print this help message\n");
   fprintf(stderr, "  -H                    Start halted, allowing a debugger to connect\n");
   fprintf(stderr, "  --isa=<name>          RISC-V ISA string [default %s]\n", DEFAULT_ISA);
   fprintf(stderr, "  --pc=<address>        Override ELF entry point\n");
@@ -42,6 +44,18 @@ static void help()
   fprintf(stderr, "  --debug-sba=<bits>    Debug bus master supports up to "
       "<bits> wide accesses [default 0]\n");
   fprintf(stderr, "  --debug-auth          Debug module requires debugger to authenticate\n");
+  fprintf(stderr, "  --dmi-rti=<n>         Number of Run-Test/Idle cycles "
+      "required for a DMI access [default 0]\n");
+  fprintf(stderr, "  --abstract-rti=<n>    Number of Run-Test/Idle cycles "
+      "required for an abstract command to execute [default 0]\n");
+  fprintf(stderr, "  --without-hasel       Debug module supports hasel\n");
+
+  exit(exit_code);
+}
+
+static void suggest_help()
+{
+  fprintf(stderr, "Try 'spike --help' for more information.\n");
   exit(1);
 }
 
@@ -98,6 +112,9 @@ int main(int argc, char** argv)
   unsigned progsize = 2;
   unsigned max_bus_master_bits = 0;
   bool require_authentication = false;
+  unsigned dmi_rti = 0;
+  unsigned abstract_rti = 0;
+  bool support_hasel = true;
   std::vector<int> hartids;
 
   auto const hartids_parser = [&](const char *s) {
@@ -113,8 +130,8 @@ int main(int argc, char** argv)
   };
 
   option_parser_t parser;
-  parser.help(&help);
-  parser.option('h', 0, 0, [&](const char* s){help();});
+  parser.help(&suggest_help);
+  parser.option('h', "help", 0, [&](const char* s){help(0);});
   parser.option('d', 0, 0, [&](const char* s){debug = true;});
   parser.option('g', 0, 0, [&](const char* s){histogram = true;});
   parser.option('l', 0, 0, [&](const char* s){log = true;});
@@ -145,6 +162,12 @@ int main(int argc, char** argv)
       [&](const char* s){max_bus_master_bits = atoi(s);});
   parser.option(0, "debug-auth", 0,
       [&](const char* s){require_authentication = true;});
+  parser.option(0, "dmi-rti", 1,
+      [&](const char* s){dmi_rti = atoi(s);});
+  parser.option(0, "abstract-rti", 1,
+      [&](const char* s){abstract_rti = atoi(s);});
+  parser.option(0, "without-hasel", 0,
+      [&](const char* s){support_hasel = false;});
 
   auto argv1 = parser.parse(argv);
   std::vector<std::string> htif_args(argv1, (const char*const*)argv + argc);
@@ -155,9 +178,11 @@ int main(int argc, char** argv)
     help();
 
   sim_t s(isa, nprocs, halted, start_pc, mems, htif_args, std::move(hartids),
-      progsize, max_bus_master_bits, require_authentication);
+      progsize, max_bus_master_bits, require_authentication,
+      abstract_rti, support_hasel);
   std::unique_ptr<remote_bitbang_t> remote_bitbang((remote_bitbang_t *) NULL);
-  std::unique_ptr<jtag_dtm_t> jtag_dtm(new jtag_dtm_t(&s.debug_module));
+  std::unique_ptr<jtag_dtm_t> jtag_dtm(
+      new jtag_dtm_t(&s.debug_module, dmi_rti));
   if (use_rbb) {
     remote_bitbang.reset(new remote_bitbang_t(rbb_port, &(*jtag_dtm)));
     s.set_remote_bitbang(&(*remote_bitbang));
