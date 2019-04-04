@@ -6,4 +6,5 @@
 #include "internals.h"
 #include "specialize.h"
 #include "tracer.h"
+#include "insn_wrappers.h"
 #include <assert.h>
