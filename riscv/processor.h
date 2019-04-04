@@ -298,6 +298,8 @@ public:
 
   void trigger_updated();
 
+  int dynamic_opportunities;
+  
 private:
   simif_t* sim;
   mmu_t* mmu; // main memory is always accessed via the mmu

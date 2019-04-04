@@ -69,16 +69,116 @@ inline void processor_t::update_histogram(reg_t pc)
 #endif
 }
 
+#define MATCH_INSN(INSN, ins) ((ins.length() == 4 && (ins.bits() & MASK_##INSN) == MATCH_##INSN))
+#define MATCH_C_INSN(INSN, ins) ((ins.length() == 2 && (ins.bits() & MASK_C_##INSN) == MATCH_C_##INSN))
+#define RISCV_ENABLE_DYNAMIC_DETECT
+
 // This is expected to be inlined by the compiler so each use of execute_insn
 // includes a duplicated body of the function to get separate fetch.func
 // function calls.
-static reg_t execute_insn(processor_t* p, reg_t pc, insn_fetch_t fetch)
+static inline reg_t execute_insn(processor_t* p, reg_t pc, insn_fetch_t fetch)
 {
   commit_log_stash_privilege(p);
   reg_t npc = fetch.func(p, fetch.insn, pc);
   if (npc != PC_SERIALIZE_BEFORE) {
     commit_log_print_insn(p->get_state(), pc, fetch.insn);
     p->update_histogram(pc);
+
+    // look for trivial instructions, e.g. add zero
+    
+#ifdef RISCV_ENABLE_DYNAMIC_DETECT
+    insn_t insn = fetch.insn;
+
+    if (MATCH_INSN(ADD, insn) || MATCH_INSN(ADDW, insn)) {
+      // check either argument for 0 and the other for the destination
+
+      if (insn.rs1() == insn.rd() && RS2 == 0) {
+        p->dynamic_opportunities++;
+      } else if (insn.rs2() == insn.rd() && RS1 == 0) {
+        p->dynamic_opportunities++;
+      }
+    }
+
+    else if (MATCH_INSN(SUB, insn) || MATCH_INSN(SUBW, insn)) {
+      if (insn.rs1() == insn.rd() && RS2 == 0) {
+        p->dynamic_opportunities++;
+      }
+    }
+
+    else if (MATCH_INSN(MUL, insn) || MATCH_INSN(MULW, insn)) {
+      if (insn.rs1() == insn.rd() && RS2 == 1) {
+        p->dynamic_opportunities++;
+      }
+    }
+
+    else if (MATCH_C_INSN(ADD, insn)) {
+      if (insn.rvc_rs1() == insn.rvc_rd() && RVC_RS2 == 0) {
+        p->dynamic_opportunities++;
+      } else if (insn.rvc_rs2() == insn.rvc_rd() && RVC_RS1 == 0) {
+        p->dynamic_opportunities++;
+      }
+    }
+
+    else if (MATCH_C_INSN(SUB, insn)) {
+      if (insn.rvc_rs1() == insn.rvc_rd() && RVC_RS2 == 0) {
+        p->dynamic_opportunities++;
+      }
+    }
+
+    else if (MATCH_INSN(SLL, insn) || MATCH_INSN(SLLW, insn)) {
+      if (insn.rs1() == insn.rd() && RS2 == 0) {
+        p->dynamic_opportunities++;
+      }
+    }
+
+    else if (MATCH_INSN(SRL, insn) || MATCH_INSN(SRLW, insn)) {
+      if (insn.rs1() == insn.rd() && RS2 == 0) {
+        p->dynamic_opportunities++;
+      }
+    }
+
+    else if (MATCH_INSN(SRA, insn) || MATCH_INSN(SRAW, insn)) {
+      if (insn.rs1() == insn.rd() && RS2 == 0) {
+        p->dynamic_opportunities++;
+      }
+    }
+
+    else if (MATCH_INSN(AND, insn)) {
+      if (insn.rs1() == insn.rd() && RS2 == 0xFFFFFFFF) {
+        p->dynamic_opportunities++;
+      }
+    }
+
+    else if (MATCH_C_INSN(AND, insn)) {
+      if (insn.rvc_rs1() == insn.rvc_rd() && RVC_RS2 == 0xFFFFFFFF) {
+        p->dynamic_opportunities++;
+      }
+    }
+
+    else if (MATCH_INSN(OR, insn)) {
+      if (insn.rs1() == insn.rd() && RS2 == 0) {
+        p->dynamic_opportunities++;
+      }
+    }
+
+    else if (MATCH_C_INSN(OR, insn)) {
+      if (insn.rvc_rs1() == insn.rvc_rd() && RVC_RS2 == 0) {
+        p->dynamic_opportunities++;
+      }
+    }
+
+    else if (MATCH_INSN(XOR, insn)) {
+      if (insn.rs1() == insn.rd() && RS2 == 0) {
+        p->dynamic_opportunities++;
+      }
+    }
+
+    else if (MATCH_C_INSN(XOR, insn)) {
+      if (insn.rvc_rs1() == insn.rvc_rd() && RVC_RS2 == 0) {
+        p->dynamic_opportunities++;
+      }
+    }
+#endif
   }
   return npc;
 }

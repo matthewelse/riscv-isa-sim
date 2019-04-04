@@ -37,15 +37,22 @@ processor_t::processor_t(const char* isa, simif_t* sim, uint32_t id,
   reset();
 }
 
+#define RISCV_ENABLE_DYNAMIC_DETECT
+
 processor_t::~processor_t()
 {
 #ifdef RISCV_ENABLE_HISTOGRAM
   if (histogram_enabled)
   {
+    // disable this for dynamic opportunities
     fprintf(stderr, "PC Histogram size:%zu\n", pc_histogram.size());
     for (auto it : pc_histogram)
       fprintf(stderr, "%0" PRIx64 " %" PRIu64 "\n", it.first, it.second);
   }
+#endif
+
+#ifdef RISCV_ENABLE_DYNAMIC_DETECT
+  fprintf(stderr, "DYNAMIC count: %d\n", dynamic_opportunities);
 #endif
 
   delete mmu;
