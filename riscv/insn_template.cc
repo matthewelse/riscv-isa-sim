@@ -9,6 +9,22 @@ reg_t rv32_NAME(processor_t* p, insn_t insn, reg_t pc)
   BEFORE_NAME;
   #include "insns/NAME.h"
   AFTER_NAME;
+
+  // at this point, we have reg_t arg1, arg2;
+  if (arg1 == 0) {
+    // count
+  }
+  else if (arg1 == 1) {
+    // count
+  }
+
+  if (arg2 == 0) {
+    // count
+  }
+  else if (arg2 == 0) {
+    // count
+  }
+
   trace_opcode(p, OPCODE, insn);
   return npc;
 }
